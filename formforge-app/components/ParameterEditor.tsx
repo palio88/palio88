@@ -3,7 +3,7 @@ import { View, Text, Switch, TextInput, StyleSheet, ScrollView } from 'react-nat
 import Slider from '@react-native-community/slider';
 import { useDesignStore } from '@/stores/design.store';
 import { colors, spacing, radius } from '@/constants/tokens';
-import type { RangeParam, BoolParam, TextParam } from '@/lib/types';
+import type { TemplateParam, RangeParam, BoolParam, TextParam } from '@/lib/types';
 
 export function ParameterEditor() {
   const { activeTemplate, params, updateParam } = useDesignStore();
@@ -18,12 +18,12 @@ export function ParameterEditor() {
             <Text style={styles.label}>{param.label}</Text>
             {param.type === 'range' && (
               <Text style={styles.value}>
-                {String(params[key] ?? param.default)}
+                {String(params[key] ?? (param as RangeParam).default)}
                 {(param as RangeParam).unit ? ` ${(param as RangeParam).unit}` : ''}
               </Text>
             )}
           </View>
-          <ParamControl paramKey={key} param={param} />
+          <ParamControl paramKey={key} param={param} value={params[key]} onUpdate={updateParam} />
         </View>
       ))}
     </ScrollView>
@@ -33,26 +33,32 @@ export function ParameterEditor() {
 function ParamControl({
   paramKey,
   param,
+  value,
+  onUpdate,
 }: {
   paramKey: string;
-  param: ReturnType<typeof Object.values<typeof import('@/lib/types').TemplateParam>>[number];
+  param: TemplateParam;
+  value: unknown;
+  onUpdate: (key: string, value: unknown) => void;
 }) {
-  const { params, updateParam } = useDesignStore();
+  const handleSlider = useCallback(
+    (v: number) => onUpdate(paramKey, Math.round(v * 10) / 10),
+    [paramKey, onUpdate],
+  );
 
   if (param.type === 'range') {
     const rp = param as RangeParam;
-    const value = Number(params[paramKey] ?? rp.default);
     return (
       <Slider
         style={styles.slider}
         minimumValue={rp.min}
         maximumValue={rp.max}
-        value={value}
-        step={(rp.max - rp.min) / 100}
+        value={Number(value ?? rp.default)}
+        step={Math.max(0.1, (rp.max - rp.min) / 100)}
         minimumTrackTintColor={colors.teal}
         maximumTrackTintColor={colors.border}
         thumbTintColor={colors.teal}
-        onValueChange={(v) => updateParam(paramKey, Math.round(v * 10) / 10)}
+        onValueChange={handleSlider}
       />
     );
   }
@@ -61,8 +67,8 @@ function ParamControl({
     const bp = param as BoolParam;
     return (
       <Switch
-        value={Boolean(params[paramKey] ?? bp.default)}
-        onValueChange={(v) => updateParam(paramKey, v)}
+        value={Boolean(value ?? bp.default)}
+        onValueChange={(v) => onUpdate(paramKey, v)}
         trackColor={{ false: colors.border, true: colors.teal }}
         thumbColor={colors.hl}
       />
@@ -74,8 +80,8 @@ function ParamControl({
     return (
       <TextInput
         style={styles.textInput}
-        value={String(params[paramKey] ?? tp.default)}
-        onChangeText={(v) => updateParam(paramKey, v)}
+        value={String(value ?? tp.default)}
+        onChangeText={(v) => onUpdate(paramKey, v)}
         placeholderTextColor={colors.muted}
         maxLength={60}
       />
