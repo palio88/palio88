@@ -1,12 +1,14 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, SafeAreaView, ScrollView,
+  ActivityIndicator, SafeAreaView, Alert,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useDesignStore } from '@/stores/design.store';
 import { ParameterEditor } from '@/components/ParameterEditor';
+import { ValidationBadge } from '@/components/ValidationBadge';
 import { colors, spacing, radius } from '@/constants/tokens';
+import { exportFile } from '@/lib/export';
 import templates from '@/data/templates.json';
 import type { Template } from '@/lib/types';
 
@@ -80,11 +82,7 @@ export default function EditorScreen() {
         <View style={styles.editorHeader}>
           <Text style={styles.templateName}>{activeTemplate.name}</Text>
           {lastGeneration && (
-            <View style={styles.validBadge}>
-              <Text style={styles.validBadgeText}>
-                {lastGeneration.validation.manifold ? 'MANIFOLD ✓' : 'CHECK ⚠'}
-              </Text>
-            </View>
+            <ValidationBadge validation={lastGeneration.validation} />
           )}
         </View>
         <ParameterEditor />
@@ -93,10 +91,28 @@ export default function EditorScreen() {
       {/* Export bar */}
       {lastGeneration && (
         <View style={styles.exportBar}>
-          <TouchableOpacity style={styles.exportBtn}>
+          <TouchableOpacity
+            style={styles.exportBtn}
+            onPress={async () => {
+              try {
+                await exportFile(lastGeneration.stl_url, 'stl', activeTemplate?.name ?? 'design');
+              } catch (e) {
+                Alert.alert('Export failed', e instanceof Error ? e.message : 'Unknown error');
+              }
+            }}
+          >
             <Text style={styles.exportBtnText}>Export STL</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.exportBtn, styles.exportBtnSecondary]}>
+          <TouchableOpacity
+            style={[styles.exportBtn, styles.exportBtnSecondary]}
+            onPress={async () => {
+              try {
+                await exportFile(lastGeneration.tmf_url, '3mf', activeTemplate?.name ?? 'design');
+              } catch (e) {
+                Alert.alert('Export failed', e instanceof Error ? e.message : 'Unknown error');
+              }
+            }}
+          >
             <Text style={styles.exportBtnText}>Export 3MF</Text>
           </TouchableOpacity>
         </View>
