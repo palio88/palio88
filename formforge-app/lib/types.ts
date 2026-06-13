@@ -43,6 +43,48 @@ export interface Template {
 
 export type JobStatus = 'queued' | 'generating' | 'validating' | 'exporting' | 'ready' | 'failed';
 
+// ─── Print report (returned by CAD worker v2) ─────────────────────────────────
+
+export interface PrintIssue {
+  severity: 'error' | 'warning' | 'info';
+  code: string;
+  message: string;
+  detail?: string;
+}
+
+export interface DimensionInfo {
+  x: number;
+  y: number;
+  z: number;
+  volume_cm3: number;
+  surface_area_cm2: number;
+}
+
+export interface BedFitResult {
+  printer: string;
+  fits: boolean;
+  bed_x: number;
+  bed_y: number;
+  bed_z: number;
+  margin_x: number;
+  margin_y: number;
+  margin_z: number;
+}
+
+export interface PrintReport {
+  is_printable: boolean;
+  errors: PrintIssue[];
+  warnings: PrintIssue[];
+  info: PrintIssue[];
+  dimensions: DimensionInfo | null;
+  bed_fit: Record<string, BedFitResult>;
+  estimated_support_needed: boolean;
+  wall_thickness_min_mm: number | null;
+  overhang_fraction: number;
+}
+
+// ─── Legacy validation result (mock mode / v1 compat) ────────────────────────
+
 export interface ValidationResult {
   manifold: boolean;
   wall_thickness_ok: boolean;
@@ -54,7 +96,9 @@ export interface GenerateResponse {
   stl_url: string;
   glb_url: string;
   tmf_url: string;
-  validation: ValidationResult;
+  print_report?: PrintReport;
+  /** @deprecated use print_report — kept for mock mode compat */
+  validation?: ValidationResult;
   execution_time_ms: number;
 }
 

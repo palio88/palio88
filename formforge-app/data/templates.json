@@ -7,10 +7,17 @@
     "thumbnail": "simple_box.png",
     "tags": ["box", "storage", "container", "beginner"],
     "free": true,
+    "max_single_printer_bed": {"x": 250, "y": 250, "z": 180},
+    "print_hints": {
+      "orientation": "open_side_up",
+      "supports_needed": false,
+      "recommended_infill": 15,
+      "recommended_walls": 3
+    },
     "params": {
-      "width":          {"min": 50,  "max": 300, "default": 100, "unit": "mm",  "label": "Width",            "type": "range"},
-      "depth":          {"min": 50,  "max": 300, "default": 80,  "unit": "mm",  "label": "Depth",            "type": "range"},
-      "height":         {"min": 20,  "max": 200, "default": 60,  "unit": "mm",  "label": "Height",           "type": "range"},
+      "width":          {"min": 50,  "max": 250, "default": 100, "unit": "mm",  "label": "Width",            "type": "range"},
+      "depth":          {"min": 50,  "max": 250, "default": 80,  "unit": "mm",  "label": "Depth",            "type": "range"},
+      "height":         {"min": 20,  "max": 180, "default": 60,  "unit": "mm",  "label": "Height",           "type": "range"},
       "wall_thickness": {"min": 1.5, "max": 5,   "default": 2,   "unit": "mm",  "label": "Wall Thickness",   "type": "range"},
       "has_lid":        {"default": false,                        "label": "Add Lid",                         "type": "bool"},
       "fillet_radius":  {"min": 0,   "max": 8,   "default": 2,   "unit": "mm",  "label": "Corner Rounding",  "type": "range"}
@@ -24,6 +31,13 @@
     "thumbnail": "phone_stand.png",
     "tags": ["phone", "stand", "desk", "cable"],
     "free": true,
+    "max_single_printer_bed": {"x": 90, "y": 120, "z": 120},
+    "print_hints": {
+      "orientation": "back_flat_down",
+      "supports_needed": false,
+      "recommended_infill": 20,
+      "recommended_walls": 3
+    },
     "params": {
       "phone_width":     {"min": 60, "max": 90,  "default": 75, "unit": "mm",  "label": "Phone Width",       "type": "range"},
       "phone_thickness": {"min": 6,  "max": 16,  "default": 9,  "unit": "mm",  "label": "Phone Thickness",   "type": "range"},
@@ -40,9 +54,16 @@
     "thumbnail": "cable_box.png",
     "tags": ["cable", "desk", "organizer", "storage"],
     "free": false,
+    "max_single_printer_bed": {"x": 240, "y": 180, "z": 120},
+    "print_hints": {
+      "orientation": "open_side_up",
+      "supports_needed": false,
+      "recommended_infill": 10,
+      "recommended_walls": 2
+    },
     "params": {
-      "width":           {"min": 80, "max": 300, "default": 180, "unit": "mm", "label": "Width",              "type": "range"},
-      "depth":           {"min": 60, "max": 200, "default": 120, "unit": "mm", "label": "Depth",              "type": "range"},
+      "width":           {"min": 80, "max": 240, "default": 180, "unit": "mm", "label": "Width",              "type": "range"},
+      "depth":           {"min": 60, "max": 180, "default": 120, "unit": "mm", "label": "Depth",              "type": "range"},
       "height":          {"min": 40, "max": 120, "default": 70,  "unit": "mm", "label": "Height",             "type": "range"},
       "cable_slots":     {"min": 1,  "max": 4,   "default": 2,   "unit": "",   "label": "Cable Slots (per side)", "type": "range"},
       "slot_diameter":   {"min": 8,  "max": 25,  "default": 14,  "unit": "mm", "label": "Slot Diameter",      "type": "range"},
@@ -57,6 +78,14 @@
     "thumbnail": "wall_hook.png",
     "tags": ["hook", "wall", "storage", "mount", "hardware"],
     "free": true,
+    "max_single_printer_bed": {"x": 80, "y": 100, "z": 50},
+    "print_hints": {
+      "orientation": "wall_plate_flat",
+      "supports_needed": false,
+      "recommended_infill": 40,
+      "recommended_walls": 4,
+      "note": "Print vertically with wall plate on bed for best layer adhesion at load point"
+    },
     "params": {
       "hook_width":     {"min": 20, "max": 80,  "default": 40, "unit": "mm",  "label": "Hook Width",          "type": "range"},
       "hook_depth":     {"min": 30, "max": 100, "default": 60, "unit": "mm",  "label": "Hook Depth",          "type": "range"},
@@ -74,6 +103,14 @@
     "thumbnail": "name_plate.png",
     "tags": ["nameplate", "sign", "desk", "text", "personalized"],
     "free": false,
+    "max_single_printer_bed": {"x": 300, "y": 80, "z": 10},
+    "print_hints": {
+      "orientation": "face_down",
+      "supports_needed": false,
+      "recommended_infill": 15,
+      "recommended_walls": 3,
+      "note": "Print face-down for best text quality"
+    },
     "params": {
       "plate_width":  {"min": 60,  "max": 300, "default": 150, "unit": "mm", "label": "Plate Width",          "type": "range"},
       "plate_height": {"min": 25,  "max": 80,  "default": 45,  "unit": "mm", "label": "Plate Height",         "type": "range"},

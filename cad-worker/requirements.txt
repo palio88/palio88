@@ -4,3 +4,6 @@ build123d==0.7.0
 pydantic==2.7.4
 restrictedpython==7.1
 python-multipart==0.0.9
+trimesh==4.4.1
+numpy==1.26.4
+scipy==1.13.1

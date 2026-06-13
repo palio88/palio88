@@ -12,7 +12,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
-app = FastAPI(title="FormForge CAD Worker", version="1.0.0")
+from validation import validate_stl, PRINTER_PROFILES
+
+app = FastAPI(title="FormForge CAD Worker", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,9 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MAX_EXEC_TIME = int(os.environ.get("MAX_EXECUTION_TIME", "10"))
-MIN_WALL_THICKNESS_MM = 1.5
-MAX_OVERHANG_DEGREES = 45.0
+MAX_EXEC_TIME   = int(os.environ.get("MAX_EXECUTION_TIME", "10"))
+FILE_BASE_URL   = os.environ.get("FILE_BASE_URL", "http://localhost:8001/files")
 
 BLOCKED_IMPORTS = {
     "os", "subprocess", "socket", "sys", "shutil", "pathlib",
@@ -32,7 +33,6 @@ BLOCKED_IMPORTS = {
     "paramiko", "fabric", "pty", "tty", "termios", "signal",
     "ctypes", "cffi", "mmap", "resource", "pwd", "grp",
 }
-
 BLOCKED_BUILTINS = {"open", "exec", "eval", "compile", "__import__", "input"}
 
 
@@ -43,18 +43,50 @@ class ParametricRequest(BaseModel):
 
     @field_validator("template_code")
     @classmethod
-    def validate_no_obvious_injections(cls, v: str) -> str:
-        lowered = v.lower()
+    def no_obvious_injection(cls, v: str) -> str:
+        low = v.lower()
         for danger in ["import os", "import subprocess", "import socket", "__import__"]:
-            if danger in lowered:
-                raise ValueError(f"Blocked pattern in template_code: {danger}")
+            if danger in low:
+                raise ValueError(f"Blocked pattern: {danger}")
         return v
 
 
-class ValidationResult(BaseModel):
-    manifold: bool
-    wall_thickness_ok: bool
-    warnings: list[str]
+class PrintIssueOut(BaseModel):
+    severity: str
+    code: str
+    message: str
+    detail: str = ""
+
+
+class DimensionsOut(BaseModel):
+    x: float
+    y: float
+    z: float
+    volume_cm3: float
+    surface_area_cm2: float
+
+
+class BedFitOut(BaseModel):
+    printer: str
+    fits: bool
+    bed_x: float
+    bed_y: float
+    bed_z: float
+    margin_x: float
+    margin_y: float
+    margin_z: float
+
+
+class PrintReportOut(BaseModel):
+    is_printable: bool
+    errors: list[PrintIssueOut]
+    warnings: list[PrintIssueOut]
+    info: list[PrintIssueOut]
+    dimensions: DimensionsOut | None
+    bed_fit: dict[str, BedFitOut]
+    estimated_support_needed: bool
+    wall_thickness_min_mm: float | None
+    overhang_fraction: float
 
 
 class GenerateResponse(BaseModel):
@@ -62,12 +94,11 @@ class GenerateResponse(BaseModel):
     stl_url: str
     glb_url: str
     tmf_url: str
-    validation: ValidationResult
+    print_report: PrintReportOut
     execution_time_ms: int
 
 
 def ast_lint(code: str) -> list[str]:
-    """Layer 1: AST-based static analysis before execution."""
     errors: list[str] = []
     try:
         tree = ast.parse(code)
@@ -75,17 +106,16 @@ def ast_lint(code: str) -> list[str]:
         return [f"SyntaxError: {e}"]
 
     for node in ast.walk(tree):
-        # Block dangerous imports
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            if isinstance(node, ast.Import):
-                names = [alias.name.split(".")[0] for alias in node.names]
-            else:
-                names = [node.module.split(".")[0]] if node.module else []
+            names = (
+                [alias.name.split(".")[0] for alias in node.names]
+                if isinstance(node, ast.Import)
+                else ([node.module.split(".")[0]] if node.module else [])
+            )
             for name in names:
                 if name in BLOCKED_IMPORTS:
                     errors.append(f"Blocked import: {name}")
 
-        # Block dangerous builtins
         if isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name) and node.func.id in BLOCKED_BUILTINS:
                 errors.append(f"Blocked builtin: {node.func.id}")
@@ -93,11 +123,10 @@ def ast_lint(code: str) -> list[str]:
                 if node.func.attr in {"system", "popen", "spawn", "exec_command"}:
                     errors.append(f"Blocked method: {node.func.attr}")
 
-        # Block attribute access to dunder internals
         if isinstance(node, ast.Attribute):
             if node.attr.startswith("__") and node.attr.endswith("__"):
                 if node.attr not in {"__class__", "__name__", "__doc__"}:
-                    errors.append(f"Blocked dunder access: {node.attr}")
+                    errors.append(f"Blocked dunder: {node.attr}")
 
     return errors
 
@@ -106,21 +135,19 @@ def build_execution_script(template_code: str, params: dict, output_dir: str) ->
     params_repr = repr(params)
     return f"""
 import sys
-sys.path.insert(0, '/app')
-
 {template_code}
 
 result = generate({params_repr})
-
-import json
-from build123d import export_stl, export_step
 
 stl_path = '{output_dir}/output.stl'
 glb_path = '{output_dir}/output.glb'
 tmf_path = '{output_dir}/output.3mf'
 
+# STL export (primary — universally supported)
+from build123d import export_stl
 export_stl(result, stl_path)
 
+# GLB export for in-app 3D preview
 try:
     from build123d import export_gltf
     export_gltf(result, glb_path)
@@ -128,6 +155,7 @@ except Exception:
     import shutil
     shutil.copy(stl_path, glb_path)
 
+# 3MF export (includes units metadata — preferred for modern slicers)
 try:
     from build123d import export_3mf
     export_3mf(result, tmf_path)
@@ -135,32 +163,24 @@ except Exception:
     import shutil
     shutil.copy(stl_path, tmf_path)
 
-# Manifold check
-try:
-    is_manifold = result.is_manifold
-except Exception:
-    is_manifold = True
+import json, os
+bb = result.bounding_box()
+with open('{output_dir}/cad_meta.json', 'w') as f:
+    json.dump({{
+        "volume": float(result.volume),
+        "is_manifold": getattr(result, 'is_manifold', True),
+        "bounding_box": {{
+            "x": float(bb.size.X),
+            "y": float(bb.size.Y),
+            "z": float(bb.size.Z),
+        }},
+    }}, f)
 
-result_data = {{
-    "manifold": is_manifold,
-    "volume": float(result.volume) if hasattr(result, 'volume') else 0.0,
-    "bounding_box": {{
-        "x": float(result.bounding_box().size.X),
-        "y": float(result.bounding_box().size.Y),
-        "z": float(result.bounding_box().size.Z),
-    }},
-}}
-
-with open('{output_dir}/result.json', 'w') as f:
-    import json
-    json.dump(result_data, f)
-
-print("SUCCESS")
+print("CAD_SUCCESS")
 """
 
 
 def run_in_sandbox(script: str, output_dir: str) -> tuple[bool, str]:
-    """Layer 2+3: subprocess isolation with timeout and resource limits."""
     script_path = Path(output_dir) / "exec_script.py"
     script_path.write_text(script)
 
@@ -180,36 +200,14 @@ def run_in_sandbox(script: str, output_dir: str) -> tuple[bool, str]:
             env=env,
         )
         if proc.returncode != 0:
-            return False, proc.stderr[:2000]
+            return False, proc.stderr[:3000]
+        if "CAD_SUCCESS" not in proc.stdout:
+            return False, f"Script did not complete: {proc.stdout[:1000]}"
         return True, proc.stdout
     except subprocess.TimeoutExpired:
         return False, f"Execution exceeded {MAX_EXEC_TIME}s timeout"
     except Exception as e:
         return False, str(e)
-
-
-def validate_geometry(result_json: dict, params: dict) -> ValidationResult:
-    warnings: list[str] = []
-    manifold = result_json.get("manifold", False)
-
-    bb = result_json.get("bounding_box", {})
-    min_dim = min(bb.get("x", 999), bb.get("y", 999), bb.get("z", 999))
-
-    wall_t = params.get("wall_thickness", params.get("thickness", MIN_WALL_THICKNESS_MM + 1))
-    wall_ok = float(wall_t) >= MIN_WALL_THICKNESS_MM
-
-    if not manifold:
-        warnings.append("Geometry may not be fully manifold — check for gaps before printing.")
-    if not wall_ok:
-        warnings.append(f"Wall thickness {wall_t}mm is below recommended 1.5mm minimum.")
-    if min_dim < 5:
-        warnings.append("Very small minimum dimension — verify scale before printing.")
-
-    return ValidationResult(
-        manifold=manifold,
-        wall_thickness_ok=wall_ok,
-        warnings=warnings,
-    )
 
 
 @app.post("/parametric", response_model=GenerateResponse)
@@ -228,36 +226,49 @@ async def generate_parametric(request: ParametricRequest):
         if not success:
             raise HTTPException(status_code=500, detail={"cad_error": output})
 
-        result_json_path = Path(tmpdir) / "result.json"
-        if not result_json_path.exists():
-            raise HTTPException(status_code=500, detail={"cad_error": "No result.json produced"})
-
-        import json
-        result_data = json.loads(result_json_path.read_text())
-
-        validation = validate_geometry(result_data, request.params)
-
         stl_path = Path(tmpdir) / "output.stl"
-        glb_path = Path(tmpdir) / "output.glb"
-        tmf_path = Path(tmpdir) / "output.3mf"
+        if not stl_path.exists():
+            raise HTTPException(status_code=500, detail={"cad_error": "STL not produced"})
 
-        base_url = os.environ.get("FILE_BASE_URL", "http://localhost:8001/files")
-        stl_url = f"{base_url}/{job_id}/output.stl"
-        glb_url = f"{base_url}/{job_id}/output.glb"
-        tmf_url = f"{base_url}/{job_id}/output.3mf"
+        # Full geometric validation via trimesh
+        report = validate_stl(str(stl_path))
+
+        stl_url = f"{FILE_BASE_URL}/{job_id}/output.stl"
+        glb_url = f"{FILE_BASE_URL}/{job_id}/output.glb"
+        tmf_url = f"{FILE_BASE_URL}/{job_id}/output.3mf"
 
         exec_ms = int((time.monotonic() - t0) * 1000)
+
+    report_dict = report.as_dict()
 
     return GenerateResponse(
         job_id=job_id,
         stl_url=stl_url,
         glb_url=glb_url,
         tmf_url=tmf_url,
-        validation=validation,
+        print_report=PrintReportOut(
+            is_printable=report_dict["is_printable"],
+            errors=report_dict["errors"],
+            warnings=report_dict["warnings"],
+            info=report_dict["info"],
+            dimensions=report_dict["dimensions"],
+            bed_fit=report_dict["bed_fit"],
+            estimated_support_needed=report_dict["estimated_support_needed"],
+            wall_thickness_min_mm=report_dict["wall_thickness_min_mm"],
+            overhang_fraction=report_dict["overhang_fraction"],
+        ),
         execution_time_ms=exec_ms,
     )
 
 
+@app.get("/printers")
+async def list_printers():
+    return [
+        {"id": k, "bed_x": v[0], "bed_y": v[1], "bed_z": v[2]}
+        for k, v in PRINTER_PROFILES.items()
+    ]
+
+
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "cad-worker"}
+    return {"status": "ok", "service": "cad-worker", "version": "2.0.0"}

@@ -7,12 +7,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { useDesignStore } from '@/stores/design.store';
 import { useDesignSave } from '@/hooks/useDesignSave';
 import { ParameterEditor } from '@/components/ParameterEditor';
-import { ValidationBadge } from '@/components/ValidationBadge';
+import { PrintReadinessReport } from '@/components/PrintReadinessReport';
 import { colors, spacing, radius } from '@/constants/tokens';
 import { exportFile } from '@/lib/export';
 import { analytics, Events } from '@/lib/analytics';
 import templates from '@/data/templates.json';
-import type { Template } from '@/lib/types';
+import type { Template, PrintReport } from '@/lib/types';
 
 const DEBOUNCE_MS = 500;
 const MOCK_MODE = process.env.EXPO_PUBLIC_MOCK_CAD === 'true';
@@ -24,6 +24,7 @@ export default function EditorScreen() {
     generate, isGenerating, lastGeneration, generationError,
   } = useDesignStore();
   const { save, isSaving } = useDesignSave();
+  const printReport: PrintReport | null = lastGeneration?.print_report ?? null;
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -117,7 +118,6 @@ export default function EditorScreen() {
       <View style={styles.editorHeader}>
         <Text style={styles.templateName}>{activeTemplate.name}</Text>
         <View style={styles.headerActions}>
-          {lastGeneration && <ValidationBadge validation={lastGeneration.validation} />}
           <TouchableOpacity
             style={[styles.saveBtn, isSaving && styles.saveBtnDisabled]}
             onPress={handleSave}
@@ -134,6 +134,9 @@ export default function EditorScreen() {
       <View style={styles.editorPanel}>
         <ParameterEditor />
       </View>
+
+      {/* Print readiness summary */}
+      {printReport && <PrintReadinessReport report={printReport} />}
 
       {/* Export bar */}
       {lastGeneration && (

@@ -67,12 +67,41 @@ async function mockGenerate(
     stl_url: `mock://files/${jobId}/output.stl`,
     glb_url: `mock://files/${jobId}/output.glb`,
     tmf_url: `mock://files/${jobId}/output.3mf`,
-    validation: {
-      manifold: true,
-      wall_thickness_ok: wallT >= 1.5,
-      warnings: wallT < 1.5
-        ? [`Wall thickness ${wallT}mm is below recommended 1.5mm minimum.`]
-        : [],
+    print_report: {
+      is_printable: wallT >= 1.2,
+      errors: wallT < 1.2 ? [{
+        severity: 'error' as const,
+        code: 'WALL_TOO_THIN',
+        message: `Wall thickness ${wallT}mm is below printable minimum of 1.2mm.`,
+        detail: 'Increase wall thickness in the parameter editor.',
+      }] : [],
+      warnings: wallT >= 1.2 && wallT < 1.5 ? [{
+        severity: 'warning' as const,
+        code: 'WALL_THIN',
+        message: `Wall thickness ${wallT}mm is below recommended 1.5mm.`,
+        detail: 'Walls may be fragile. Increase for better durability.',
+      }] : [],
+      info: wallT >= 1.5 ? [{
+        severity: 'info' as const,
+        code: 'PRINT_READY',
+        message: 'Geometry passed all print-readiness checks.',
+      }] : [],
+      dimensions: {
+        x: Number(params['width'] ?? params['plate_width'] ?? 100),
+        y: Number(params['depth'] ?? params['plate_height'] ?? 80),
+        z: Number(params['height'] ?? params['plate_depth'] ?? 60),
+        volume_cm3: 0,
+        surface_area_cm2: 0,
+      },
+      bed_fit: {
+        bambu_x1c:  { printer: 'bambu_x1c',  fits: true,  bed_x: 256, bed_y: 256, bed_z: 256, margin_x: 0, margin_y: 0, margin_z: 0 },
+        prusa_mk4:  { printer: 'prusa_mk4',  fits: true,  bed_x: 250, bed_y: 210, bed_z: 220, margin_x: 0, margin_y: 0, margin_z: 0 },
+        ender_3:    { printer: 'ender_3',    fits: true,  bed_x: 220, bed_y: 220, bed_z: 250, margin_x: 0, margin_y: 0, margin_z: 0 },
+        generic_fdm:{ printer: 'generic_fdm',fits: true,  bed_x: 220, bed_y: 220, bed_z: 220, margin_x: 0, margin_y: 0, margin_z: 0 },
+      },
+      estimated_support_needed: false,
+      wall_thickness_min_mm: wallT,
+      overhang_fraction: 0,
     },
     execution_time_ms: Math.round(delay),
   };
