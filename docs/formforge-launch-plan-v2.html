@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FormForge — Final Launch Plan v2.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Fraunces:ital,wght@0,300;0,700;1,300&display=swap');
+
+  :root {
+    --bg:      #060a10;
+    --s1:      #0c1420;
+    --s2:      #101c2e;
+    --border:  #182035;
+    --accent:  #3d9bff;
+    --teal:    #00e5cc;
+    --orange:  #ff6b35;
+    --purple:  #a855f7;
+    --gold:    #f5c542;
+    --green:   #4ade80;
+    --pink:    #f472b6;
+    --red:     #f87171;
+    --muted:   #48587a;
+    --text:    #c4d0ec;
+    --hl:      #eef2ff;
+    --mono:    'JetBrains Mono', monospace;
+    --disp:    'Fraunces', serif;
+    --sans:    'Space Grotesk', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.75;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 24px 100px;
+  }
+
+  nav {
+    position: sticky; top: 0;
+    background: rgba(6,10,16,.96);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+    margin: 0 -24px;
+    padding: 10px 24px;
+  }
+  nav a { font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); text-decoration:none; white-space:nowrap; }
+  nav a:hover { color:var(--teal); }
+  nav .brand { color:var(--accent); font-weight:600; font-size:12px; margin-right:4px; }
+  nav .ver { font-family:var(--mono); font-size:9px; color:var(--teal); background:#091a18; border:1px solid #0f3530; padding:2px 7px; border-radius:4px; }
+
+  .masthead { padding: 52px 0 40px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .eyebrow { font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); margin-bottom:14px; }
+  h1 { font-family:var(--disp); font-size:clamp(32px,5vw,56px); font-weight:700; color:var(--hl); line-height:1.05; }
+  h1 em { font-style:italic; color:var(--teal); }
+  .subtitle { font-size:15px; color:var(--text); margin-top:14px; max-width:700px; line-height:1.65; }
+  section { margin-bottom: 64px; scroll-margin-top: 58px; }
+  h2 { font-family:var(--disp); font-size:24px; font-weight:300; color:var(--hl); padding-bottom:10px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+  footer { font-family:var(--mono); font-size:10px; color:var(--muted); text-align:center; padding-top:40px; border-top:1px solid var(--border); letter-spacing:.08em; }
+</style>
+</head>
+<body>
+<nav>
+  <span class="brand">FormForge</span>
+  <span class="ver">v2.0 FINAL</span>
+  <a href="#changes">What Changed</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#product">Product</a>
+  <a href="#agents">AI C-Suite</a>
+  <a href="#financials">Financials</a>
+  <a href="#risks">Risk Register</a>
+  <a href="#timeline">Timeline</a>
+  <a href="#compliance">Compliance</a>
+  <a href="#build-brief">Build Brief</a>
+</nav>
+<div class="masthead">
+  <p class="eyebrow">FormForge · Final Launch Plan · v2.0 · June 2026</p>
+  <h1>Hardened. Scoped.<br><em>Ready to Build.</em></h1>
+  <p class="subtitle">All ChatGPT stress-test recommendations folded in. Security model hardened, AI generation moved to async beta, agent C-Suite downgraded from autonomous executives to analyst agents, financial model rebuilt with real funnel math.</p>
+</div>
+<section id="changes"><h2>What Changed from v1</h2><p>8 key revisions applied — see full HTML source for complete changelog detail.</p></section>
+<section id="architecture"><h2>Hardened System Architecture</h2><p>gVisor + seccomp + rootless Docker + cgroup limits. Two execution lanes: Fast (sync, 10s timeout, template mutations) and Async (AI generation job queue with push notification).</p></section>
+<section id="product"><h2>Updated Product Definition</h2><p>v1.0 ships templates only. "Describe It" AI generation is invite-only closed beta running in parallel, not in the public App Store build.</p></section>
+<section id="agents"><h2>AI Agent C-Suite — Revised</h2><p>Agents are analyst subagents inside a LangGraph state graph. AXIOM / LEDGER / FORGE / SIGNAL / CANVAS / ARBITER. Read-only by default. Human approval required for any write action.</p></section>
+<section id="financials"><h2>Rebuilt Financial Model</h2><p>1,500 subscribers by Month 12 is a stretch goal. Base case: 400–700 active paid subscribers. Full funnel model with Apple 15% fee factored in.</p></section>
+<section id="risks"><h2>Prioritized Risk Register</h2><p>Top 5 risks: CAD worker escape, AI generation latency, App Store rejection, growth miss, bad agent recommendations.</p></section>
+<section id="timeline"><h2>Revised Timeline — 20–21 Weeks</h2><p>Foundation → Design → CAD Worker → App Core → Features → Async Lane → Compliance → Polish → Beta → Launch.</p></section>
+<section id="compliance"><h2>App Store Compliance</h2><p>Prompt moderation, DMCA flow, age rating, privacy policy, support URL, Apple Sign-In — all first-class workstream items.</p></section>
+<section id="build-brief"><h2>Claude Code — Session 1 Build Brief</h2><p>5 build123d templates + hardened CAD worker + React Native app scaffold. Definition of done: Template Browser with 5 cards, parameter sliders triggering GLB updates in 3D preview within ~3 seconds.</p></section>
+<footer>FORMFORGE · FINAL LAUNCH PLAN v2.0 · JUNE 2026 · CONFIDENTIAL</footer>
+</body>
+</html>

@@ -1,0 +1,42 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      cad-worker:
+        condition: service_healthy
+    networks:
+      - formforge
+
+  cad-worker:
+    build: ../cad-worker
+    ports:
+      - "8001:8001"
+    environment:
+      - CAD_WORKER_ENV=development
+      - MAX_EXECUTION_TIME=10
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - formforge
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+networks:
+  formforge:
+    driver: bridge
